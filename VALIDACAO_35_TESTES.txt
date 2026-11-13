@@ -1,0 +1,40 @@
+test_csv_decimal_virgula (test_engine.TestesDeImportacao.test_csv_decimal_virgula) ... ok
+test_estesiometria_nao_altera_n (test_engine.TestesDeImportacao.test_estesiometria_nao_altera_n) ... ok
+test_anova (test_engine.TestesEstatisticos.test_anova) ... ok
+test_constant_error (test_engine.TestesEstatisticos.test_constant_error) ... ok
+test_descritiva (test_engine.TestesEstatisticos.test_descritiva) ... ok
+test_fisher (test_engine.TestesEstatisticos.test_fisher) ... ok
+test_mannwhitney (test_engine.TestesEstatisticos.test_mannwhitney) ... ok
+test_missing_pairwise (test_engine.TestesEstatisticos.test_missing_pairwise) ... ok
+test_pearson (test_engine.TestesEstatisticos.test_pearson) ... ok
+test_shapiro (test_engine.TestesEstatisticos.test_shapiro) ... ok
+test_spearman (test_engine.TestesEstatisticos.test_spearman) ... ok
+test_t_pareado (test_engine.TestesEstatisticos.test_t_pareado) ... ok
+test_welch (test_engine.TestesEstatisticos.test_welch) ... ok
+test_anova_referencia_analitica (test_referencia.TestesDeReferencia.test_anova_referencia_analitica) ... ok
+test_dois_grupos_selecionados_consistem_em_observacoes_independentes (test_referencia.TestesDeReferencia.test_dois_grupos_selecionados_consistem_em_observacoes_independentes) ... ok
+test_erros_esperados (test_referencia.TestesDeReferencia.test_erros_esperados) ... ok
+test_fisher_referencia_exata (test_referencia.TestesDeReferencia.test_fisher_referencia_exata) ... ok
+test_formato_csv_e_ausentes (test_referencia.TestesDeReferencia.test_formato_csv_e_ausentes) ... ok
+test_pareamento_descarta_apenas_pares_incompletos (test_referencia.TestesDeReferencia.test_pareamento_descarta_apenas_pares_incompletos) ... ok
+test_quiquadrado_referencia_contingencia (test_referencia.TestesDeReferencia.test_quiquadrado_referencia_contingencia) ... ok
+test_t_pareado_referencia_analitica (test_referencia.TestesDeReferencia.test_t_pareado_referencia_analitica) ... ok
+test_wilcoxon_referencia_exata (test_referencia.TestesDeReferencia.test_wilcoxon_referencia_exata) ... ok
+test_ausentes_nao_alteram_brutos (test_v02.TestesVersao02.test_ausentes_nao_alteram_brutos) ... ok
+test_codigos_textuais (test_v02.TestesVersao02.test_codigos_textuais) ... ok
+test_dic_inicial (test_v02.TestesVersao02.test_dic_inicial) ... ok
+test_editar_nomes_e_tipo (test_v02.TestesVersao02.test_editar_nomes_e_tipo) ... ok
+test_excel_e_resumo (test_v02.TestesVersao02.test_excel_e_resumo) ... ok
+test_gerar_html_escapa_entradas (test_v02.TestesVersao02.test_gerar_html_escapa_entradas) ... ok
+test_invalido_numerico_impedido (test_v02.TestesVersao02.test_invalido_numerico_impedido) ... ok
+test_nome_duplicado_impedido (test_v02.TestesVersao02.test_nome_duplicado_impedido) ... ok
+test_projeto_roundtrip (test_v02.TestesVersao02.test_projeto_roundtrip) ... ok
+test_rotulo_numerico_inteiro (test_v02.TestesVersao02.test_rotulo_numerico_inteiro) ... ok
+test_rotulos_formatados (test_v02.TestesVersao02.test_rotulos_formatados) ... ok
+test_sem_analise_nao_gera_relatorio (test_v02.TestesVersao02.test_sem_analise_nao_gera_relatorio) ... ok
+test_zip_aleatorio_rejeitado (test_v02.TestesVersao02.test_zip_aleatorio_rejeitado) ... ok
+
+----------------------------------------------------------------------
+Ran 35 tests in 0.187s
+
+OK
