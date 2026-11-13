@@ -2,6 +2,76 @@
 
 Aplicativo local, de código aberto (MIT), com aparência e fluxo de trabalho **inspirados em** softwares estatísticos com editor de casos e variáveis. Não usa código do IBM SPSS Statistics, não é um clone integral e não recebeu certificação estatística.
 
+## Como executar
+
+O programa roda **no seu computador**, pelo navegador. Não precisa de Docker nem de ambiente virtual.
+
+### Requisitos
+
+- **Python 3.11 ou mais novo**, 64 bits ([python.org/downloads](https://www.python.org/downloads/)). Na instalação, marque **"Add python.exe to PATH"**. Python 3.10 ou anterior **não** serve (o pandas 3 exige 3.11+).
+- Internet apenas na primeira vez, para baixar as bibliotecas.
+- Para conferir a versão instalada, abra o PowerShell e digite `py --list` (ou `python --version`).
+
+### Passo a passo (Windows, PowerShell)
+
+1. **Abra o PowerShell na pasta do projeto** (a que contém o `app.py`). No Explorador de Arquivos, clique na barra de endereço, digite `powershell` e tecle Enter. Ou digite:
+
+   ```powershell
+   cd "C:\caminho\para\Estatistica_Livre"
+   ```
+
+2. **Instale as bibliotecas (somente na primeira vez):**
+
+   ```powershell
+   py -3.11 -m pip install streamlit pandas numpy scipy matplotlib openpyxl pyarrow
+   ```
+
+   Se você usa outra versão (3.12, 3.13...), troque `-3.11` por ela, ou use `python -m pip install ...`.
+
+3. **Inicie o programa:**
+
+   ```powershell
+   py -3.11 -m streamlit run app.py
+   ```
+
+   O navegador abre sozinho em **http://localhost:8501**. Se não abrir, copie esse endereço para a barra do navegador.
+
+4. **Para encerrar**, volte à janela do PowerShell e pressione **Ctrl+C**.
+
+Nas próximas vezes, repita apenas os passos **1, 3 e 4**.
+
+> **Nada é salvo automaticamente.** Ao fechar o programa, dados e análises somem, a menos que você use **Salvar projeto (.elproj)** na barra lateral e exporte o relatório na etapa **5 · Relatório**.
+
+### Conferir se está tudo funcionando (opcional)
+
+```powershell
+py -3.11 -m unittest discover -s tests -v
+```
+
+O resultado esperado termina em **`Ran 152 tests ... OK`** (leva cerca de 1 minuto).
+
+### Versões em que foi testado
+
+Windows 11, Python 3.11, Streamlit 1.67, pandas 3.1, NumPy 2.4, SciPy 1.17, matplotlib 3.11, openpyxl 3.1. Outras versões do Python (3.12 em diante) não foram testadas. Para publicar resultados, registre as versões exatas que você usou (`py -3.11 -m pip freeze`).
+
+> O arquivo `requirements.txt` foi escrito para o Python 3.15 (versões mínimas mais altas) e **não foi testado com o Python 3.11**; por isso o passo 2 lista as bibliotecas diretamente.
+
+### Atalhos `.bat` (alternativa)
+
+Quem tem **Python 3.15 de 64 bits** pode usar os atalhos de duplo clique: `instalar_e_abrir_python315.bat` na primeira vez e `abrir_programa.bat` nas seguintes (veja a Opção B mais abaixo). Esses atalhos **não funcionam com outras versões do Python**.
+
+### Problemas comuns
+
+| Mensagem ou sintoma | O que fazer |
+|---|---|
+| `py` não é reconhecido | Reinstale o Python marcando "Add python.exe to PATH", ou use `python` no lugar de `py -3.11`. |
+| `ModuleNotFoundError: No module named 'streamlit'` (ou pandas, scipy...) | Faça o passo 2 com **a mesma versão** do Python usada no passo 3. |
+| A página não abre / "porta em uso" | Use outra porta: `py -3.11 -m streamlit run app.py --server.port 8502` e abra `http://localhost:8502`. |
+| Alterei o código e a tela não mudou | Pare com Ctrl+C e inicie de novo (módulos importados ficam em cache). |
+| O PowerShell não deixa executar | Rode os comandos acima sem `.ps1`; não é necessário alterar a política de execução. |
+
+Uso local: evite publicar bases com dados pessoais ou clínicos identificáveis e não exponha o Streamlit à internet sem autenticação.
+
 ## O que mudou na 0.2
 
 - **Visão de dados**: editar células, adicionar linhas, criar/excluir colunas, aplicar alterações, exportar CSV.
