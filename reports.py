@@ -80,6 +80,10 @@ def gerar_html(historico: list[dict], titulo: str, fonte: str, schema: dict | No
                 f"<span><b>α:</b> {r.get('alpha',.05):.2f}</span>",
                 f"<span><b>Efeito:</b> {escape(r.get('efeito', '') or '—')}</span>",
                 "</div>"]
+        if r.get("conclusao"):
+            out.append(f"<p><strong>Interpretação:</strong> {escape(r['conclusao'])}</p>")
+        if r.get("magnitude"):
+            out.append(f"<p><strong>Magnitude do efeito (referência convencional):</strong> {escape(r['magnitude'])}</p>")
         tabela = r.get("tabela")
         if isinstance(tabela, pd.DataFrame) and not tabela.empty:
             out.append(tabela.to_html(index=False, border=0, escape=True, na_rep="—", float_format=lambda v: f"{v:.5g}"))

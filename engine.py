@@ -5,12 +5,46 @@ fazem pareamento dentro da linha. Remoção de dados faltantes por análise.
 """
 from __future__ import annotations
 
+import itertools
 import math
 from dataclasses import dataclass, field
+from functools import lru_cache
 
 import numpy as np
 import pandas as pd
 from scipy import stats
+
+
+MAX_CATEGORIAS = 30
+SPEARMAN_EXATO_MAX_N = 9          # 9! = 362.880 permutações; acima disso usa-se a aproximação
+FRIEDMAN_EXATO_MAX_OPERACOES = 2_000_000   # ~2 s no pior caso; acima disso usa-se a aproximação χ²
+PMIN_ALERTA = 0.05
+
+
+@lru_cache(maxsize=None)
+def _permutacoes(n: int) -> np.ndarray:
+    """Todas as permutações dos índices 0..n-1 (n! linhas)."""
+    return np.array(list(itertools.permutations(range(n))), dtype=np.int8)
+
+
+def spearman_exato(x, y) -> tuple[float, float, float, int]:
+    """Teste de permutação exato para o ρ de Spearman (bilateral).
+
+    Permuta os postos de y contra os de x (postos médios em caso de empates, condicionando
+    nos empates observados). Devolve (rho, p exato, menor p possível, nº de permutações).
+    """
+    rx = stats.rankdata(np.asarray(x, dtype=float))
+    ry = stats.rankdata(np.asarray(y, dtype=float))
+    n = len(rx)
+    rxc, ryc = rx - rx.mean(), ry - ry.mean()
+    denom = math.sqrt(float(rxc @ rxc) * float(ryc @ ryc))
+    perms = _permutacoes(n)
+    rhos = (ryc[perms] @ rxc) / denom
+    obs = float(rxc @ ryc) / denom
+    tol = 1e-9
+    p = float(np.mean(np.abs(rhos) >= abs(obs) - tol))
+    p_min = float(np.mean(np.abs(rhos) >= np.max(np.abs(rhos)) - tol))
+    return obs, p, p_min, len(perms)
 
 
 @dataclass
@@ -99,8 +133,20 @@ def correlacao(df: pd.DataFrame, a: str, b: str, metodo: str = "spearman") -> Re
         nome, simbolo = "Correlação de Spearman", "ρ"
     else:
         raise ValueError("Método de correlação inválido.")
-    return Resultado(nome, simbolo, float(r), float(p), len(d),
-                     observacoes=f"Pares completos: {len(d)}; exclusão por pares. Associação não implica causalidade.")
+    obs = f"Pares completos: {len(d)}; exclusão por pares. Associação não implica causalidade."
+    if metodo == "spearman":
+        if len(d) <= SPEARMAN_EXATO_MAX_N:
+            # A aproximação pela distribuição t é imprecisa em amostras pequenas: usa-se o p exato.
+            r, p, p_min, n_perm = spearman_exato(d.x, d.y)
+            nome = "Correlação de Spearman (p exato)"
+            obs += f" p exato por permutação ({n_perm:,} permutações dos postos)".replace(",", ".") + "."
+            if p_min > PMIN_ALERTA:
+                pm = _vir(p_min, 4)
+                obs += (f" ATENÇÃO: com N = {len(d)} o menor p possível é {pm}; o teste não consegue "
+                        "indicar significância a 5%, mesmo com correlação perfeita.")
+        else:
+            obs += " p-valor pela aproximação da distribuição t (amostra grande o bastante)."
+    return Resultado(nome, simbolo, float(r), float(p), len(d), observacoes=obs)
 
 
 def t_independente(df: pd.DataFrame, var: str, group: str, level1, level2) -> Resultado:
@@ -161,9 +207,20 @@ def wilcoxon_pareado(df: pd.DataFrame, a: str, b: str) -> Resultado:
     if np.all(dif == 0):
         raise ValueError("Todas as diferenças são zero; não há teste aplicável.")
     w, p = stats.wilcoxon(dif, zero_method="wilcox", alternative="two-sided")
-    return Resultado("Wilcoxon pareado", "W", float(w), float(p), len(d),
-                     observacoes=f"Pares: {len(d)}; diferenças zero: {sum(dif==0)}. "
-                                 "Para interpretação sobre a mediana das diferenças, considere a simetria da distribuição.")
+    # zero_method="wilcox" descarta diferenças nulas: o N do teste é o de diferenças não nulas.
+    zeros = int(np.sum(dif == 0))
+    n_teste = len(dif) - zeros
+    obs = (f"Pares completos: {len(d)}; diferenças zero descartadas: {zeros}; "
+           f"N analisado (diferenças não nulas): {n_teste}. "
+           "Para interpretação sobre a mediana das diferenças, considere a simetria da distribuição.")
+    nao_nulas = np.abs(dif[dif != 0])
+    if len(np.unique(nao_nulas)) == len(nao_nulas):  # sem empates: p exato por enumeração de sinais
+        p_min = 2 / 2 ** n_teste
+        if p_min > PMIN_ALERTA:
+            pm = _vir(p_min, 4)
+            obs += (f" ATENÇÃO: com N = {n_teste} o menor p bilateral possível é {pm}; o teste não consegue "
+                    "indicar significância a 5%, mesmo que todas as diferenças tenham o mesmo sinal.")
+    return Resultado("Wilcoxon pareado", "W", float(w), float(p), n_teste, observacoes=obs)
 
 
 def anova(df: pd.DataFrame, var: str, group: str) -> Resultado:
@@ -201,6 +258,9 @@ def qui_quadrado(df: pd.DataFrame, a: str, b: str) -> Resultado:
     tab = pd.crosstab(d[a].astype(str), d[b].astype(str))
     if tab.shape[0] < 2 or tab.shape[1] < 2:
         raise ValueError("O teste exige ao menos duas categorias por variável.")
+    if tab.shape[0] > MAX_CATEGORIAS or tab.shape[1] > MAX_CATEGORIAS:
+        raise ValueError(f"Variável com mais de {MAX_CATEGORIAS} categorias ({tab.shape[0]}×{tab.shape[1]}). "
+                         "Provavelmente não é categórica (ex.: variável contínua); escolha outra variável.")
     chi, p, gl, expected = stats.chi2_contingency(tab, correction=False)
     n = int(tab.to_numpy().sum())
     v = math.sqrt(float(chi)/(n*min(tab.shape[0]-1, tab.shape[1]-1)))
@@ -218,3 +278,80 @@ def qui_quadrado(df: pd.DataFrame, a: str, b: str) -> Resultado:
         obs += "A aproximação do χ² pode ser inadequada; considere agrupar categorias justificadamente ou teste exato/Monte Carlo. "
     return Resultado(test, stat, stat_val, p_selected, n, "V de Cramér", float(v),
                      tab.reset_index(), obs + "Frequências são contagens de participantes independentes.")
+
+
+def _vir(valor: float, casas: int) -> str:
+    """Número com vírgula decimal, para textos em português."""
+    return f"{valor:.{casas}f}".replace(".", ",")
+
+
+def _friedman_p_exato(ranks: np.ndarray, chi_obs_s2: int) -> float | None:
+    """p exato do Friedman por convolução das somas de postos, condicional aos empates observados.
+
+    Usa postos dobrados (inteiros) para evitar erro de ponto flutuante. Estados equivalentes por
+    permutação das condições são fundidos (a estatística é simétrica nas condições). Devolve None
+    se o custo estimado passar de FRIEDMAN_EXATO_MAX_OPERACOES.
+    """
+    n, k = ranks.shape
+    estados = {tuple([0] * k): 1}
+    operacoes = 0
+    for i in range(n):
+        perms = set(itertools.permutations(tuple(int(round(2 * r)) for r in ranks[i])))
+        operacoes += len(estados) * len(perms)
+        if operacoes > FRIEDMAN_EXATO_MAX_OPERACOES:
+            return None
+        novos: dict[tuple, int] = {}
+        for est, cont in estados.items():
+            for perm in perms:
+                chave = tuple(sorted(a + b for a, b in zip(est, perm)))
+                novos[chave] = novos.get(chave, 0) + cont
+        estados = novos
+    total = sum(estados.values())
+    favoraveis = sum(c for est, c in estados.items() if sum(s * s for s in est) >= chi_obs_s2)
+    return favoraveis / total
+
+
+def friedman(df: pd.DataFrame, columns: list[str]) -> Resultado:
+    """Teste de Friedman para k ≥ 3 medidas repetidas nos mesmos participantes (casos completos)."""
+    if len(set(columns)) != len(columns):
+        raise ValueError("Selecione medidas diferentes.")
+    if len(columns) < 3:
+        raise ValueError("O teste de Friedman exige pelo menos 3 medidas (para 2 medidas use Wilcoxon pareado).")
+    d = pd.DataFrame({c: _numeric(df, c) for c in columns}).dropna()
+    n, k = d.shape
+    if n < 2:
+        raise ValueError("O teste de Friedman exige pelo menos 2 participantes com todas as medidas válidas.")
+    m = d.to_numpy(dtype=float)
+    ranks = np.apply_along_axis(stats.rankdata, 1, m)
+    if np.all(ranks == (k + 1) / 2):
+        raise ValueError("Todas as medidas são iguais em todos os participantes; o teste não é aplicável.")
+    soma = ranks.sum(axis=0)
+    # correção de empates (a mesma usada por scipy.stats.friedmanchisquare)
+    termo_empates = 0.0
+    for linha in ranks:
+        _, cont = np.unique(linha, return_counts=True)
+        termo_empates += float(np.sum(cont ** 3 - cont))
+    c = 1 - termo_empates / (n * k * (k * k - 1))
+    chi = (12 / (n * k * (k + 1)) * float(np.sum(soma ** 2)) - 3 * n * (k + 1)) / c
+    kendall_w = chi / (n * (k - 1))
+    p_assint = float(stats.chi2.sf(chi, k - 1))
+    s2_obs = int(round(float(np.sum((2 * soma) ** 2))))
+    p_exato = _friedman_p_exato(ranks, s2_obs)
+    if p_exato is not None:
+        nome, p = "Teste de Friedman (p exato)", p_exato
+        metodo = f"p exato por enumeração dos postos (aproximação χ² com gl = {k - 1}: p = {_vir(p_assint, 4)})."
+    else:
+        nome, p = "Teste de Friedman (aproximação χ²)", p_assint
+        metodo = (f"p pela aproximação χ² com gl = {k - 1} (a enumeração exata seria grande demais para "
+                  f"N = {n} e {k} medidas).")
+    detalhes = pd.DataFrame({
+        "Medida": columns, "N": n,
+        "Mediana": [float(np.median(m[:, j])) for j in range(k)],
+        "Média": [float(np.mean(m[:, j])) for j in range(k)],
+        "Ordem média": [float(np.mean(ranks[:, j])) for j in range(k)],
+    })
+    obs = (f"Participantes com todas as {k} medidas válidas: {n} (o caso inteiro sai se faltar alguma). "
+           f"χ² = {_vir(chi, 4)} com gl = {k - 1}. {metodo} "
+           "O teste indica se há diferença global entre as medidas; pós-testes entre pares não estão incluídos "
+           "(se usar vários Wilcoxon, corrija a multiplicidade). Com N pequeno, o poder é baixo.")
+    return Resultado(nome, "χ²", float(chi), float(p), n, "W de Kendall", float(kendall_w), detalhes, obs)

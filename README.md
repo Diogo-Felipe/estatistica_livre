@@ -6,10 +6,10 @@ Aplicativo local, de código aberto (MIT), com aparência e fluxo de trabalho **
 
 - **Visão de dados**: editar células, adicionar linhas, criar/excluir colunas, aplicar alterações, exportar CSV.
 - **Visão de variáveis**: renomear colunas, escrever rótulos, definir tipo numérico/texto, escala/ordinal/nominal, códigos de ausentes e rótulos de valores (`0=Não;1=Sim`). Valores originais permanecem na tabela; códigos de ausentes são excluídos apenas na cópia de análise.
-- **Análises estatísticas**: mantém os procedimentos da versão 0.1.1 (descritiva, Shapiro-Wilk, Pearson, Spearman, Welch, t pareado, Mann–Whitney, Wilcoxon, ANOVA de uma via, χ² e Fisher 2×2).
+- **Análises estatísticas**: descritiva, Shapiro-Wilk, Pearson, Spearman, Welch, t pareado, Mann–Whitney, Wilcoxon, **Friedman** (3 ou mais medidas repetidas, com W de Kendall), ANOVA de uma via, χ² e Fisher 2×2. O **Spearman usa p exato por permutação quando N ≤ 9** (a aproximação pela distribuição t é imprecisa em amostras pequenas), e Spearman/Wilcoxon avisam quando o N é tão pequeno que o teste não consegue alcançar p < 0,05.
 - **Relatórios estatísticos**: painel com testes executados, variáveis escolhidas, N, p-valor, tamanho de efeito (quando disponível), tabelas e notas de pressupostos. Exportação HTML, Excel (.xlsx), resumo CSV; o HTML pode ser impresso em PDF pelo navegador.
 - **Projetos locais**: salvar/restaurar dados e metadados em `.elproj` (ZIP interno com JSON). **O histórico de análises não é salvo no arquivo de projeto**; exporte o relatório separadamente.
-- **Testes de regressão**: 35 testes automatizados (22 herdados + 13 novos), incluindo resultados estatísticos de referência, dados ausentes, renomeação, segurança básica do HTML, round-trip do projeto e Excel de relatórios.
+- **Testes de regressão**: 152 testes automatizados (motor estatístico, dicionário, relatórios, projeto, importação, interface e tema), incluindo resultados estatísticos de referência, dados ausentes, renomeação, segurança básica do HTML, round-trip do projeto e Excel de relatórios.
 
 ### Opção A — atualizar a instalação anterior, sem reinstalar as bibliotecas (recomendado)
 
@@ -40,7 +40,7 @@ O instalador usa `--only-binary=:all:` para evitar compilação de dependências
 
 ### Entradas e saídas
 
-- Importação: `.csv` (`;`/`,`/TAB/automático, vírgula ou ponto decimal), `.xlsx` (seleção de aba).
+- Importação: `.csv` (`;`/`,`/TAB/automático, vírgula ou ponto decimal), `.xlsx` (seleção de aba). **Linha do cabeçalho configurável** (1 = primeira linha) para arquivos com títulos ou notas acima da tabela, com pré-visualização das primeiras linhas; as linhas acima do cabeçalho são ignoradas. **Colunas com dados mas sem nome no cabeçalho** podem receber um nome ou ser removidas no momento da importação (nunca são descartadas em silêncio).
 - Exportação: dados em `.csv` UTF-8-sig; relatórios em `.html`, `.xlsx` e `.csv`; projeto em `.elproj`.
 - Não abre `.sav` e não gera arquivo `.spv`; não executa sintaxe SPSS.
 - Não executa dados no servidor da IBM. A execução é **local**, salvo se você configurar manualmente publicação remota.
@@ -64,7 +64,7 @@ Na pasta com o ambiente Python ativo:
 .\.venv315\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
-Ou clique em `validar_windows.bat`. Resultado esperado: **Ran 35 tests ... OK**.
+Ou clique em `validar_windows.bat`. Resultado esperado: **Ran 152 tests ... OK**.
 
 Estes testes foram executados neste ambiente de desenvolvimento com **Python 3.13**, não no Windows com Python 3.15.2. A interface Streamlit precisa ser conferida na sua máquina; testes automatizados não substituem validação científica.
 
@@ -72,13 +72,17 @@ Estes testes foram executados neste ambiente de desenvolvimento com **Python 3.1
 
 ```text
 Estatistica_Livre/
-├── app.py                     # Streamlit: 5 guias e interface
+├── app.py                     # Streamlit: ponto de entrada (fluxo em 5 etapas)
+├── paginas/                   # uma página por etapa (dados, variáveis, análises, gráficos, relatório)
+├── componentes.py, estilo.py, estado.py, barra_lateral.py  # cabeçalho/cartões, CSS (claro/escuro), estado da sessão e painel lateral
+├── interpretacao.py           # textos de interpretação e magnitude de efeito (sem Streamlit)
+├── procedimentos.py           # catálogo de procedimentos e ligação com o engine
 ├── engine.py                  # motor estatístico preservado da 0.1.1
 ├── schema.py                  # metadados de variáveis e códigos de ausentes
 ├── data_utils.py              # CSV/Excel e exportação CSV
 ├── reports.py                 # histórico, HTML e Excel
 ├── project_io.py              # arquivo de projeto .elproj
-├── tests/                     # 35 testes automatizados
+├── tests/                     # 152 testes automatizados
 ├── requirements.txt           # dependências compatíveis com Python 3.15
 ├── exemplo_ficticio.csv       # teste visual
 ├── validacao_estatistica_ficticia.csv

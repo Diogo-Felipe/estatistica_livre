@@ -58,7 +58,7 @@ def _validar_valores_labels(texto: str) -> None:
 
 def aplicar_dicionario(df: pd.DataFrame, editado: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     """Valida renomeação, tipo, escala e metadados. Lança erro antes de aplicar parcialmente."""
-    if len(editado) != len(df) or set(COLUNAS_EDITOR) - set(editado.columns):
+    if len(editado) != len(df.columns) or set(COLUNAS_EDITOR) - set(editado.columns):
         raise ValueError("O dicionário precisa manter uma linha por variável e todas as colunas de definição.")
     nomes = editado["Nome"].fillna("").astype(str).str.strip().tolist()
     if not all(nomes) or len(set(nomes)) != len(nomes):
@@ -111,7 +111,14 @@ def preparar_analise(df: pd.DataFrame, schema: dict) -> pd.DataFrame:
             for v in valores.dropna():
                 mascara |= out[c].eq(v)
         else:
-            mascara |= out[c].astype("string").str.strip().isin(ausentes).fillna(False)
+            texto = out[c].astype("string").str.strip()
+            mascara |= texto.isin(ausentes).fillna(False)
+            # Código numérico também casa com texto numérico equivalente ("99" = "99.0" = "99,0").
+            codigos_num = pd.to_numeric(pd.Series([x.replace(",", ".") for x in ausentes]), errors="coerce").dropna()
+            if len(codigos_num):
+                convertido = _numero(out[c])
+                for v in codigos_num:
+                    mascara |= convertido.eq(v).fillna(False)
         out.loc[mascara, c] = pd.NA
     return out
 

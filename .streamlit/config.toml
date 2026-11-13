@@ -1,6 +1,18 @@
-[theme]
+[client]
+toolbarMode = "minimal"  # esconde o botão Deploy; mantém menu e troca de tema
+
+# Sem tema fixo no nível raiz: o app segue o modo claro/escuro do sistema e
+# o usuário pode trocar em ⋮ > Settings > Theme.
+[theme.light]
 primaryColor = "#1C7C92"
 backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F0F6F7"
 textColor = "#142C36"
+font = "sans serif"
+
+[theme.dark]
+primaryColor = "#4FB6CC"
+backgroundColor = "#0E1A20"
+secondaryBackgroundColor = "#16262E"
+textColor = "#E6EEF1"
 font = "sans serif"
